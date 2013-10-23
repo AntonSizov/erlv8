@@ -1,22 +1,22 @@
 -module(erlv8_vm).
 
--behaviour(gen_server2).
+-behaviour(erlv8_gen_server2).
 -include_lib("erlv8/include/erlv8.hrl").
 
 %% API
 -export([start_link/1,start/0,vm_resource/1,
-	 run/2, run/3, run/4, 
+	 run/2, run/3, run/4,
 	 run_timed/3, run_timed/4, run_timed/5,
 	 global/1,stop/1,
-	 to_string/2,to_detail_string/2,taint/2,untaint/1,equals/3, strict_equals/3, 
+	 to_string/2,to_detail_string/2,taint/2,untaint/1,equals/3, strict_equals/3,
 	 enqueue_tick/2, enqueue_tick/3, enqueue_tick/4, next_tick/2, next_tick/3, next_tick/4,
 	 stor/3, retr/2, gc/1, kill/1]).
 
-%% gen_server2 callbacks
+%% erlv8_gen_server2 callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
 		 terminate/2, code_change/3,prioritise_info/2]).
 
--define(SERVER, ?MODULE). 
+-define(SERVER, ?MODULE).
 
 -record(state, {
 	  vm,
@@ -35,10 +35,10 @@
 %%%===================================================================
 start() ->
 	VM = erlv8_nif:new_vm(),
-	supervisor2:start_child(erlv8_sup,[VM]).
+	erlv8_supervisor2:start_child(erlv8_sup,[VM]).
 
 vm_resource(Server) ->
-	gen_server2:call(Server, vm_resource).
+	erlv8_gen_server2:call(Server, vm_resource).
 
 run(Server, Source) ->
 	run(Server, erlv8_context:get(Server), Source).
@@ -78,7 +78,7 @@ global(Server) ->
 	erlv8_context:global(Ctx).
 
 stop(Server) ->
-	gen_server2:call(Server,stop).
+	erlv8_gen_server2:call(Server,stop).
 
 to_string(Server, Val) ->
 	enqueue_tick(Server, {to_string, Val}).
@@ -87,28 +87,28 @@ to_detail_string(Server, Val) ->
 	enqueue_tick(Server, {to_detail_string, Val}).
 
 enqueue_tick(Server, Tick) ->
-	gen_server2:call(Server,{enqueue_tick, Tick}, infinity).
+	erlv8_gen_server2:call(Server,{enqueue_tick, Tick}, infinity).
 
 enqueue_tick(Server, Tick, Ref) when is_reference(Ref) ->
-	gen_server2:call(Server,{enqueue_tick, Tick, Ref}, infinity);
+	erlv8_gen_server2:call(Server,{enqueue_tick, Tick, Ref}, infinity);
 
 enqueue_tick(Server, Tick, Timeout) ->
-	gen_server2:call(Server,{enqueue_tick, Tick}, Timeout).
+	erlv8_gen_server2:call(Server,{enqueue_tick, Tick}, Timeout).
 
 enqueue_tick(Server, Tick, Timeout, Ref) when is_reference(Ref) ->
-	gen_server2:call(Server,{enqueue_tick, Tick, Ref}, Timeout).
+	erlv8_gen_server2:call(Server,{enqueue_tick, Tick, Ref}, Timeout).
 
 next_tick(Server, Tick) ->
-	gen_server2:call(Server,{next_tick, Tick}, infinity).
+	erlv8_gen_server2:call(Server,{next_tick, Tick}, infinity).
 
 next_tick(Server, Tick, Ref) when is_reference(Ref) ->
-	gen_server2:call(Server,{next_tick, Tick, Ref}, infinity);
+	erlv8_gen_server2:call(Server,{next_tick, Tick, Ref}, infinity);
 
 next_tick(Server, Tick, Timeout) ->
-	gen_server2:call(Server,{next_tick, Tick}, Timeout).
+	erlv8_gen_server2:call(Server,{next_tick, Tick}, Timeout).
 
 next_tick(Server, Tick, Timeout, Ref) when is_reference(Ref) ->
-	gen_server2:call(Server,{next_tick, Tick, Ref}, Timeout).
+	erlv8_gen_server2:call(Server,{next_tick, Tick, Ref}, Timeout).
 
 taint(Server, Value) when ?is_v8(Value) ->
     enqueue_tick(Server, {taint, Value});
@@ -138,10 +138,10 @@ strict_equals(Server, V1, V2) ->
 
 
 stor(Server, Key, Value) ->
-	gen_server2:call(Server, {stor, Key, Value}).
+	erlv8_gen_server2:call(Server, {stor, Key, Value}).
 
 retr(Server, Key) ->
-	gen_server2:call(Server, {retr, Key}).
+	erlv8_gen_server2:call(Server, {retr, Key}).
 
 
 untaint({erlv8_object, _,_}=O) ->
@@ -164,7 +164,7 @@ gc(Server) ->
 	ok.
 
 kill(Server) ->
-    gen_server2:call(Server, kill),
+    erlv8_gen_server2:call(Server, kill),
     erlv8_vm:run(Server, "1"), % hide returning {throw, null}.
     ok.
 
@@ -176,7 +176,7 @@ kill(Server) ->
 %% @end
 %%--------------------------------------------------------------------
 start_link(VM) ->
-	gen_server2:start_link(?MODULE, [VM], []).
+	erlv8_gen_server2:start_link(?MODULE, [VM], []).
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -299,14 +299,14 @@ handle_info({F,#erlv8_fun_invocation{ is_construct_call = ICC, this = This, ref 
 	Self = self(),
 	spawn(fun () ->
 				  Result = (catch erlang:apply(F,[Invocation,Args])),
-				  Result1 = 
-				  case Result of 
+				  Result1 =
+				  case Result of
 					  {'EXIT',{Val, Trace}} when is_atom(Val) ->
 						  {throw, {error, ?Error(Val)}};
 					  {'EXIT',{{Tag, Val}, Trace}} ->
 						  {throw, {error, ?ErrorVal(Tag)}};
 					  _ ->
-						  case ICC of 
+						  case ICC of
 							  true ->
 								  This;
 							  false ->
@@ -315,13 +315,13 @@ handle_info({F,#erlv8_fun_invocation{ is_construct_call = ICC, this = This, ref 
 				  end,
 				  case ets:lookup(Ticked, Ref) of
 					  [{Ref, {From, {call, _, _, _}}}] ->
-						  gen_server2:reply(From, Result1),
+						  erlv8_gen_server2:reply(From, Result1),
 						  ets:delete(Ticked, Ref);
 					  [{Ref, {From, {call, _, _}}}] ->
-						  gen_server2:reply(From, Result1),
+						  erlv8_gen_server2:reply(From, Result1),
 						  ets:delete(Ticked, Ref);
 					  [{Ref, {From, {inst, _, _}}}] ->
-						  gen_server2:reply(From, Result1),
+						  erlv8_gen_server2:reply(From, Result1),
 						  ets:delete(Ticked, Ref);
 					  _ ->
 						  enqueue_tick(Self, {result, Ref, Result1})
@@ -329,12 +329,12 @@ handle_info({F,#erlv8_fun_invocation{ is_construct_call = ICC, this = This, ref 
 		  end),
 	{noreply, State};
 handle_info({result, Ref, Result}, #state{ ticked = Ticked } = State) ->
-    
+
 	case ets:lookup(Ticked, Ref) of
 		[] ->
 			{noreply, State};
 		[{Ref, {From, _Tick}}] ->
-			gen_server2:reply(From, Result),
+			erlv8_gen_server2:reply(From, Result),
 			ets:delete(Ticked, Ref),
 			{noreply, State}
 	end;
@@ -386,7 +386,7 @@ code_change(_OldVsn, State, _Extra) ->
 %%% Internal functions
 %%%===================================================================
 update_ticked(_Ref, From, {result, _, _}, Ticked) -> %% do not insert results, nobody is going to reply on them
-	gen_server2:reply(From, ok),
+	erlv8_gen_server2:reply(From, ok),
 	Ticked;
 update_ticked(Ref, From, Tick, Ticked) ->
 	ets:insert(Ticked, {Ref, {From, Tick}}).

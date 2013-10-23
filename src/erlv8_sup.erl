@@ -1,6 +1,6 @@
 -module(erlv8_sup).
 
--behaviour(supervisor2).
+-behaviour(erlv8_supervisor2).
 
 %% API
 -export([start_link/0]).
@@ -16,7 +16,7 @@
 %% ===================================================================
 
 start_link() ->
-    supervisor2:start_link({local, ?MODULE}, ?MODULE, []).
+    erlv8_supervisor2:start_link({local, ?MODULE}, ?MODULE, []).
 
 %% ===================================================================
 %% Supervisor callbacks

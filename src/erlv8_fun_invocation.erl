@@ -1,17 +1,36 @@
--module(erlv8_fun_invocation,[ICC,Holder,This,Ref,VM, Ctx]).
--export([is_construct_call/0, holder/0, this/0, global/0, vm/0]).
+-module(erlv8_fun_invocation).
+-export([new/6, is_construct_call/1, holder/1, this/1, global/1, vm/1]).
 
-is_construct_call() ->
+-record(erlv8_fun_invocation, {
+	icc,
+	holder,
+	this,
+	ref,
+	vm,
+	ctx
+}).
+
+new(ICC, Holder, This, Ref, VM, Ctx) ->
+	#erlv8_fun_invocation{
+		icc = ICC,
+		holder = Holder,
+		this = This,
+		ref = Ref,
+		vm = VM,
+		ctx = Ctx
+	}.
+
+is_construct_call(#erlv8_fun_invocation{icc = ICC}) ->
 	ICC.
 
-holder() ->
+holder(#erlv8_fun_invocation{holder = Holder}) ->
 	Holder.
 
-this() ->
+this(#erlv8_fun_invocation{this = This}) ->
 	This.
 
-global() ->
+global(#erlv8_fun_invocation{vm = VM, ctx = Ctx}) ->
 	erlv8_context:global({VM,Ctx}).
 
-vm() ->
+vm(#erlv8_fun_invocation{vm = VM}) ->
 	VM.

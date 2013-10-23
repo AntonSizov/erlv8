@@ -78,7 +78,7 @@
 %%
 %%     $Id$
 %%
--module(gen_server2).
+-module(erlv8_gen_server2).
 
 %%% ---------------------------------------------------
 %%%
@@ -361,7 +361,7 @@ enter_loop(Mod, Options, State, ServerName, Timeout, Backoff) ->
     Name = get_proc_name(ServerName),
     Parent = get_parent(),
     Debug = debug_options(Name, Options),
-    Queue = priority_queue:new(),
+    Queue = erlv8_priority_queue:new(),
     Backoff1 = extend_backoff(Backoff),
     loop(find_prioritisers(
            #gs2_state { parent = Parent, name = Name, state = State,
@@ -384,7 +384,7 @@ init_it(Starter, self, Name, Mod, Args, Options) ->
 init_it(Starter, Parent, Name0, Mod, Args, Options) ->
     Name = name(Name0),
     Debug = debug_options(Name, Options),
-    Queue = priority_queue:new(),
+    Queue = erlv8_priority_queue:new(),
     GS2State = find_prioritisers(
                  #gs2_state { parent  = Parent,
                               name    = Name,
@@ -474,7 +474,7 @@ drain(GS2State) ->
 process_next_msg(GS2State = #gs2_state { time          = Time,
                                          timeout_state = TimeoutState,
                                          queue         = Queue }) ->
-    case priority_queue:out(Queue) of
+    case erlv8_priority_queue:out(Queue) of
         {{value, Msg}, Queue1} ->
             process_msg(Msg, GS2State #gs2_state { queue = Queue1 });
         {empty, Queue1} ->
@@ -586,16 +586,16 @@ adjust_timeout_state(SleptAt, AwokeAt, {backoff, CurrentTO, MinimumTO,
 
 in({'$gen_cast', Msg}, GS2State = #gs2_state { prioritise_cast = PC,
                                                queue           = Queue }) ->
-    GS2State #gs2_state { queue = priority_queue:in(
+    GS2State #gs2_state { queue = erlv8_priority_queue:in(
                                     {'$gen_cast', Msg},
                                     PC(Msg, GS2State), Queue) };
 in({'$gen_call', From, Msg}, GS2State = #gs2_state { prioritise_call = PC,
                                                      queue           = Queue }) ->
-    GS2State #gs2_state { queue = priority_queue:in(
+    GS2State #gs2_state { queue = erlv8_priority_queue:in(
                                     {'$gen_call', From, Msg},
                                     PC(Msg, From, GS2State), Queue) };
 in(Input, GS2State = #gs2_state { prioritise_info = PI, queue = Queue }) ->
-    GS2State #gs2_state { queue = priority_queue:in(
+    GS2State #gs2_state { queue = erlv8_priority_queue:in(
                                     Input, PI(Input, GS2State), Queue) }.
 
 process_msg(Msg,
@@ -1148,5 +1148,5 @@ format_status(Opt, StatusData) ->
      {data, [{"Status", SysState},
              {"Parent", Parent},
              {"Logged events", Log},
-             {"Queued messages", priority_queue:to_list(Queue)}]} |
+             {"Queued messages", erlv8_priority_queue:to_list(Queue)}]} |
      Specfic].
