@@ -27,20 +27,21 @@ all: compile
 sh:
 	@erl -pa ebin/ deps/*/ebin/ -s reloader -eval "d:err()"
 
+deps/zeromq2/autogen.sh:
+	mkdir -p deps
+	wget https://github.com/zeromq/zeromq2-x/archive/v2.2.0.tar.gz -O deps/zeromq2.tar.gz
+	tar xzfv deps/zeromq2.tar.gz --directory=deps && mv deps/zeromq2-x-2.2.0 deps/zeromq2
 
-deps/v8/.git/config:
-	@git submodule init
-	@git submodule update
-
-deps/zeromq2/.git/HEAD:
-	@git submodule init
-	@git submodule update
-
-deps/v8/libv8.a: deps/v8/.git/config
-	cd deps/v8 && $(V8ENV) scons $(V8FLAGS)
-
-deps/zeromq2/src/.libs/libzmq.a: deps/zeromq2/.git/HEAD
+deps/zeromq2/src/.libs/libzmq.a: deps/zeromq2/autogen.sh
 	@cd deps/zeromq2 && ./autogen.sh && ./configure $(ZMQ_FLAGS) && make
+
+deps/v8/Makefile:
+	mkdir -p deps
+	wget https://github.com/v8/v8/archive/3.9.24.tar.gz -O deps/v8.tar.gz
+	tar xzfv deps/v8.tar.gz --directory=deps && mv deps/v8-3.9.24 deps/v8
+
+deps/v8/libv8.a: deps/v8/Makefile
+	cd deps/v8 && $(V8ENV) scons $(V8FLAGS)
 
 dependencies: deps/v8/libv8.a deps/zeromq2/src/.libs/libzmq.a
 	@./rebar get-deps
